@@ -152,7 +152,7 @@ exports.shareButtons = function(share) {
   }) + '\n ' + ShareButton.render({
     name: 'twitter',
     icon: 'twitter',
-    url: 'https://twitter.com/home?status=' + share.url
+    url: 'https://twitter.com/intent/tweet?url=' + share.url
   }) + '\n ' + ShareButton.render({
     name: 'facebook',
     icon: 'facebook',
