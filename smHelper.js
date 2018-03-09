@@ -139,20 +139,35 @@
     }
   }
   var ShareButton = { render: function render(button) {
-    return '<a class="share-link" target="_blank" href="' + button.url + '">\n <i class="fa fa-' + button.icon + '" aria-hidden="true"></i>\n </a>';
+    return '<a class="share-link" target="_blank" href="' + button.url + '" rel="noopener">\n <i class="fa fa-' + button.icon + '" title="' + button.name + ' Link"></i>\n </a>';
   }
 };
+var encodeHtmlEntity = function(str) {
+  var buf = [];
+  for (var i=str.length-1;i>=0;i--) {
+    if(str[i]=='&'){
+      buf.unshift('&#32;and&#32;');
+    } else if(str[i]=='"'){
+      buf.unshift('&#32;');
+    }else {
+buf.unshift(['&#', str[i].charCodeAt(), ';'].join(''));
+}
+
+  }
+  return buf.join('');
+};
 exports.shareButtons = function(share) {
+  share.title = encodeHtmlEntity(share.title);
   share.url = encodeURIComponent(share.url);
   share.img = encodeURIComponent(share.img);
   return '<div class="share-buttons">\n ' + ShareButton.render({
     name: 'linkedin',
     icon: 'linkedin',
-    url: 'https://www.linkedin.com/shareArticle?mini=true&summary=&source&url=' + share.url + '&title=' + share.title.replace('|',' ')
+    url: 'https://www.linkedin.com/shareArticle?mini=true&summary=&source&url=' + share.url + '&title=' + share.title.replace('&#124;',' ')
   }) + '\n ' + ShareButton.render({
     name: 'twitter',
     icon: 'twitter',
-    url: 'https://twitter.com/intent/tweet?url=' + share.url
+    url: 'https://twitter.com/intent/tweet?url=' + share.url + '&text=' + share.title.split('&#124;')[0]
   }) + '\n ' + ShareButton.render({
     name: 'facebook',
     icon: 'facebook',
@@ -179,13 +194,13 @@ exports.pager = function() {
     if(page < 1){
       page = 1;
     }
-    let numPages = 0;
+    var numPages = 0;
     numPages = Math.ceil(filteredNewsCount / this.pageLimit);
     this.render(page, numPages);
   }
   this.render = function(currentPage, numPages) {
 
-    let pagingControls = '<div class="page-link-container">';
+    var pagingControls = '<div class="page-link-container">';
     if (currentPage > 1) {
       pagingControls += '<a class="page-link" href="#1" data-page="1"><span>' + this.first + '</span></a>';
 
@@ -196,7 +211,7 @@ exports.pager = function() {
       }
     }
     if(numPages > 1){
-      let start, end;
+      var start, end;
       if (numPages <= this.numLinks) {
         start = 1;
         end = numPages;
@@ -214,7 +229,7 @@ exports.pager = function() {
         }
       }
       /* page loop */
-      for (let i = start; i <= end; i++) {
+      for (var i = start; i <= end; i++) {
         if (i != currentPage) {
           pagingControls += '<a class="page-link" href="#' + i + '" data-page="' + i + '"><span>' + i + '</span></a>';
         } else {
@@ -230,6 +245,41 @@ exports.pager = function() {
     pagingControls += '</div>';
     document.getElementById('paginator').innerHTML = pagingControls;
   }
-}
-
+};
+smHelper.observerContent = [];
+smHelper.observerPos = 0;
+exports.contentObserve = function contentObserve(targetId, mutationList) {
+  var observerPos = (function () {
+    return smHelper.observerPos;
+  })();
+  var mutationCallback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
+  if (window.navigator.userAgent.indexOf('Trident/') != -1) {
+    document.addEventListener("DOMNodeInserted", function (e) {
+      var mutationKey = mutationList.findKeyIndex('mutationId', e.target.id);
+      if ( mutationKey > -1) {
+        mutationList[mutationKey].callback();
+        mutationList.splice(mutationKey,1);
+      }
+    }, false);
+  } else {
+    var targetContent = document.getElementById(targetId);
+    smHelper.observerContent[observerPos] = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (addedNode){
+          var mutationKey = mutationList.findKeyIndex('mutationId', addedNode.id);
+          if ( mutationKey > -1) {
+            mutationList[mutationKey].callback();
+            mutationList.splice(mutationKey,1);
+          }
+          if(mutationList.length==0){
+            smHelper.observerContent[observerPos].disconnect();
+          }
+        });
+      });
+    });
+    var configContent = { childList: true, attributes: true, characterData: true };
+    smHelper.observerContent[observerPos].observe(targetContent, configContent);
+    smHelper.observerPos++;
+  }
+};
 }));
