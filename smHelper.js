@@ -1,4 +1,24 @@
 /*Prototypes*/
+// Add query function to window.location 
+// Example http://google.com?getThis=42&getThat=universe
+// console.log(window.location.query()); --> {getThis:'42',getThat:'universe'}
+if(!window.location.query) {
+window.location.query = function(){
+var map = {};
+
+if ("" != this.search) {
+  var groups = this.search.substr(1).split("&"), i=0, gL = groups.length;
+
+  for ( ; i<gL; i++) {
+	
+    i = groups[i].split("=");
+    map[decodeURIComponent(i[0])] = decodeURIComponent(i[1]);
+  }
+}
+
+return map;
+};
+}
 // check if an element exists in array using a comparer function
 // comparer : function(currentElement)
 Array.prototype.inArray = function(comparer) {
